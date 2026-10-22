@@ -59,6 +59,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DYUZU_TESTS=OFF
           -DENABLE_WERROR=OFF
+          -DYUZU_CMD=OFF
 
       - name: Build
         shell: pwsh
@@ -74,6 +75,7 @@ jobs:
           Select-String -Path build.log -Pattern 'FAILED:|error C\d+|error LNK\d+|fatal error' | ForEach-Object { $_.Line }
 
       - name: Upload
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: eden-windows
