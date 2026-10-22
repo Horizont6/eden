@@ -52,6 +52,33 @@ jobs:
             if ($n -ne $c) { Set-Content -Path $_.FullName -Value $n -NoNewline }
           }
 
+
+
+      - name: Patch Betop gyro fixes
+        shell: pwsh
+        run: |
+          function Patch($file, $old, $new) {
+            $text = Get-Content $file -Raw
+            if (-not $text.Contains($old)) { throw "patch target not found: $old" }
+            $text.Replace($old, $new) | Set-Content $file -NoNewline
+          }
+
+          # 1. 体感间隔：200Hz 手柄不再按 15ms 积分
+          Patch "src/input_common/drivers/joycon.cpp" `
+            '.delta_timestamp = 15000,' `
+            '.delta_timestamp = (value.delta_timestamp > 0 && value.delta_timestamp < 15000) ? value.delta_timestamp : 15000,'
+
+          # 2. 序列号：避免读到字符串结尾之后的垃圾，导致同一把手柄被重复注册
+          Patch "src/input_common/helpers/joycon_driver.cpp" `
+            'std::memcpy(&handle_serial_number, device_info->serial_number, 15);' `
+            'GetSerialNumber(device_info, handle_serial_number);'
+
+          Patch "src/input_common/helpers/joycon_driver.cpp" `
+            'std::memcpy(&serial_number, device_info->serial_number, 15);' `
+            'serial_number = {}; const wchar_t* sn = device_info->serial_number; for (std::size_t i = 0; i < serial_number.size() && sn[i] != L''\0''; ++i) { serial_number[i] = static_cast<u8>(sn[i]); }'
+
+
+
       - name: Configure
         shell: pwsh
         run: >
