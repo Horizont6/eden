@@ -33,6 +33,17 @@ jobs:
         shell: pwsh
         run: choco install ninja -y
 
+      # 修复新版 MSVC 下 sparse_large_vector.cpp 第29行的类型转换报错
+      - name: Patch source
+        shell: pwsh
+        run: |
+          $f = "src/common/sparse_large_vector.cpp"
+          $old = 'reinterpret_cast<u64>(info->ExceptionRecord->ExceptionInformation[1])'
+          $new = 'static_cast<u64>(info->ExceptionRecord->ExceptionInformation[1])'
+          $text = Get-Content $f -Raw
+          if (-not $text.Contains($old)) { throw "patch target not found" }
+          $text.Replace($old, $new) | Set-Content $f -NoNewline
+
       - name: Configure
         shell: pwsh
         run: >
@@ -43,7 +54,7 @@ jobs:
 
       - name: Build
         shell: pwsh
-        run: cmake --build build --parallel
+        run: cmake --build build --parallel -- -k 0
 
       - name: Upload
         uses: actions/upload-artifact@v4
