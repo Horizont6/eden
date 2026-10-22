@@ -44,6 +44,14 @@ jobs:
           if (-not $text.Contains($old)) { throw "patch target not found" }
           $text.Replace($old, $new) | Set-Content $f -NoNewline
 
+          # 把 MSVC 的 "警告当作错误" (/weXXXX) 改成 "关闭该警告" (/wdXXXX)，
+          # 否则新版 MSVC 下第三方代码 (zstd 等) 的警告会导致编译失败
+          Get-ChildItem -Path src -Recurse -Filter CMakeLists.txt | ForEach-Object {
+            $c = Get-Content $_.FullName -Raw
+            $n = $c -replace '/we(\d{4})', '/wd$1'
+            if ($n -ne $c) { Set-Content -Path $_.FullName -Value $n -NoNewline }
+          }
+
       - name: Configure
         shell: pwsh
         run: >
