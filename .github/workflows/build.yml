@@ -54,7 +54,16 @@ jobs:
 
       - name: Build
         shell: pwsh
-        run: cmake --build build --parallel -- -k 0
+        run: |
+          cmake --build build --parallel -- -k 0 2>&1 | Tee-Object -FilePath build.log
+          exit $LASTEXITCODE
+
+      # 编译失败时，把所有错误行集中显示在这里
+      - name: Show errors
+        if: failure()
+        shell: pwsh
+        run: |
+          Select-String -Path build.log -Pattern 'FAILED:|error C\d+|error LNK\d+|fatal error' | ForEach-Object { $_.Line }
 
       - name: Upload
         uses: actions/upload-artifact@v4
